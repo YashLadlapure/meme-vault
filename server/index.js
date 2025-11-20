@@ -8,27 +8,31 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5001; // Changed from 5000 to 5001
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Create uploads directory if it doesn't exist
+// 1. DISABLE BROWSER CACHING (Crucial Fix)
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
+
+// Path Setup
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Create data directory for storing meme metadata
 const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
 const memesFile = path.join(dataDir, 'memes.json');
 
-// Helper function to read memes from JSON file
+// Ensure directories exist
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+// Debug: Print exact file location on startup
+console.log('📍 MEMES FILE PATH:', memesFile);
+
+// Helper: Read Memes
 const readMemes = () => {
   try {
     if (fs.existsSync(memesFile)) {
@@ -37,137 +41,103 @@ const readMemes = () => {
     }
     return [];
   } catch (error) {
-    console.error('Error reading memes:', error);
+    console.error('Read Error:', error);
     return [];
   }
 };
 
-// Helper function to write memes to JSON file
+// Helper: Write Memes (With explicit error checking)
 const writeMemes = (memes) => {
   try {
     fs.writeFileSync(memesFile, JSON.stringify(memes, null, 2));
+    console.log(`💾 Wrote ${memes.length} memes to ${memesFile}`);
   } catch (error) {
-    console.error('Error writing memes:', error);
+    console.error('🔥 CRITICAL WRITE ERROR:', error);
   }
 };
 
-// Configure multer for file uploads
+// Multer Setup
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
+const upload = multer({ storage: storage });
 
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  },
-});
-
-// Serve uploaded files as static files
+// Serve Images
 app.use('/uploads', express.static(uploadsDir));
 
-// Routes
+// ROUTES
 
-// GET /api/memes - Get all memes
+// GET Memes
 app.get('/api/memes', (req, res) => {
-  try {
-    const memes = readMemes();
-    res.json(memes);
-  } catch (error) {
-    console.error('Error fetching memes:', error);
-    res.status(500).json({ error: 'Failed to fetch memes' });
-  }
+  const memes = readMemes();
+  console.log(`📤 Sending ${memes.length} memes to frontend`);
+  res.json(memes);
 });
 
-// POST /api/upload - Upload a meme
-app.post('/api/upload', upload.single('file'), (req, res) => {
+// POST Meme
+app.post('/api/upload', upload.single('image'), (req, res) => { // Changed 'file' to 'image'
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const { caption } = req.body;
-
-    if (!caption || caption.trim() === '') {
-      // Delete the uploaded file if no caption provided
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({ error: 'Caption is required' });
-    }
-
-    // Create meme object
+    
     const meme = {
       _id: Date.now().toString(),
-      caption: caption.trim(),
+      caption: caption || 'No Caption',
       imageUrl: `/uploads/${req.file.filename}`,
       filename: req.file.filename,
       createdAt: new Date().toISOString(),
     };
 
-    // Read existing memes, add new one, and save
     const memes = readMemes();
-    memes.unshift(meme); // Add to beginning (newest first)
+    memes.unshift(meme);
     writeMemes(memes);
 
-    res.status(201).json({ message: 'Meme uploaded successfully', meme });
+    res.status(201).json({ message: 'Uploaded', meme });
   } catch (error) {
-    console.error('Error uploading meme:', error);
-    res.status(500).json({ error: 'Failed to upload meme' });
+    console.error('Upload Error:', error);
+    res.status(500).json({ error: 'Upload failed' });
   }
 });
 
-// DELETE /api/memes/:id - Delete a meme
+// DELETE Meme
 app.delete('/api/memes/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const memes = readMemes();
+    console.log(`🗑️ Deleting ID: ${id}`);
 
-    const memeIndex = memes.findIndex((m) => m._id === id);
-    if (memeIndex === -1) {
+    const memes = readMemes();
+    const initialCount = memes.length;
+    
+    // Filter out the meme to delete
+    const newMemes = memes.filter(m => m._id.toString() !== id.toString());
+
+    if (newMemes.length === initialCount) {
+      console.log('❌ ID not found in list');
       return res.status(404).json({ error: 'Meme not found' });
     }
 
-    const meme = memes[memeIndex];
-
-    // Delete the file from disk
-    const filePath = path.join(uploadsDir, meme.filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Try to delete the image file (Optional cleanup)
+    const deletedMeme = memes.find(m => m._id.toString() === id.toString());
+    if (deletedMeme) {
+        const filePath = path.join(uploadsDir, deletedMeme.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
-    // Remove from array and save
-    memes.splice(memeIndex, 1);
-    writeMemes(memes);
+    // Write the NEW array to disk
+    writeMemes(newMemes);
 
-    res.json({ message: 'Meme deleted successfully' });
+    console.log(`✅ Success! Count went from ${initialCount} to ${newMemes.length}`);
+    res.json({ message: 'Deleted' });
   } catch (error) {
-    console.error('Error deleting meme:', error);
-    res.status(500).json({ error: 'Failed to delete meme' });
+    console.error('Delete Error:', error);
+    res.status(500).json({ error: 'Delete failed' });
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Server error: ' + err.message });
-});
-
-// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Meme Vault Server running on http://localhost:${PORT}`);
-  console.log(`📁 Uploads directory: ${uploadsDir}`);
-  console.log(`💾 Data directory: ${dataDir}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
