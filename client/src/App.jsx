@@ -97,11 +97,23 @@ const API_URL = 'http://localhost:5001';
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Delete this meme?')) {
-      setMemes(memes.filter(m => m.id !== id));
+const handleDelete = async (id) => {
+  if (window.confirm('Delete this meme?')) {
+    try {
+      // Call the backend API to delete
+      await axios.delete(`${API_URL}/api/memes/${id}`);
+      
+      // Update local state only after successful deletion
+      setMemes(memes.filter(m => m._id !== id));
+      setSuccess('✅ Meme deleted successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Failed to delete meme. Please try again.');
+      console.error('Error deleting meme:', error);
     }
-  };
+  }
+};
+
 
 
 const filteredMemes = memes.filter(meme =>
