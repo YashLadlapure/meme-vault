@@ -224,7 +224,7 @@ const filteredMemes = memes.filter(meme =>
           ) : (
             <div className="gallery-grid">
               {filteredMemes.map((meme) => (
-                <div key={meme.id} className="meme-card">
+               <div key={meme._id} className="meme-card">
                   <div className="meme-image-container">
                     <img
   src={`${API_URL}${meme.imageUrl}`} 
@@ -235,7 +235,7 @@ const filteredMemes = memes.filter(meme =>
                     <div className="meme-overlay">
                       <button
                         className="delete-btn"
-                        onClick={() => handleDelete(meme.id)}
+                        onClick={() => handleDelete(meme._id)}
                         title="Delete meme"
                       >
                         🗑️
