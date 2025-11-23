@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './App.css';
-
+import './app.css';
 const App = () => {
   const [memes, setMemes] = useState([]);
   const [caption, setCaption] = useState('');
