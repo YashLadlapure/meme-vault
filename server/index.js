@@ -138,6 +138,12 @@ app.delete('/api/memes/:id', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// For local development
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log('🚀 Server running on http://localhost:${PORT}');
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
