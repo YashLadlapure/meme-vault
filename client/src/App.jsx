@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './app.css';
 
-const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Replace with actual Vercel backend URL
+const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Replace with your actual Vercel backend URL
 
 const App = () => {
   const [memes, setMemes] = useState([]);
-  const [caption, setCaption] = useState('');
+  const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ const App = () => {
     }
   };
 
-  const handleCaptionChange = (e) => setCaption(e.target.value);
+  const handleTitleChange = (e) => setTitle(e.target.value);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -55,8 +55,8 @@ const App = () => {
       return;
     }
 
-    if (!caption.trim()) {
-      setError('Please add a caption');
+    if (!title.trim()) {
+      setError('Please add a caption/title');
       return;
     }
 
@@ -65,7 +65,7 @@ const App = () => {
 
     const formData = new FormData();
     formData.append('image', image);
-    formData.append('caption', caption);
+    formData.append('title', title);
 
     try {
       const response = await axios.post(`${API_URL}/memes`, formData, {
@@ -77,7 +77,7 @@ const App = () => {
       });
 
       setMemes([response.data, ...memes]);
-      setCaption('');
+      setTitle('');
       setImage(null);
       setPreview(null);
       setSuccess('✅ Meme uploaded successfully!');
@@ -94,7 +94,7 @@ const App = () => {
     if (window.confirm('Delete this meme?')) {
       try {
         await axios.delete(`${API_URL}/memes/${id}`);
-        setMemes(memes.filter(m => m._id !== id && m.public_id !== id));
+        setMemes(memes.filter(m => m.id !== id && m.publicId !== id));
         setSuccess('✅ Meme deleted successfully!');
         setTimeout(() => setSuccess(''), 3000);
       } catch (error) {
@@ -104,7 +104,7 @@ const App = () => {
   };
 
   const filteredMemes = memes.filter(meme =>
-    (meme.caption || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (meme.title || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -128,8 +128,8 @@ const App = () => {
           )}
           <input
             type="text"
-            value={caption}
-            onChange={handleCaptionChange}
+            value={title}
+            onChange={handleTitleChange}
             placeholder="Add a witty caption..."
             maxLength={200}
           />
@@ -151,17 +151,17 @@ const App = () => {
             <div>No memes yet. Be the first to upload one!</div>
           ) : (
             filteredMemes.map(meme => (
-              <div key={meme._id || meme.public_id} className="meme-card">
+              <div key={meme.id || meme.publicId} className="meme-card">
                 <img
-                  src={meme.url}
-                  alt={meme.caption}
+                  src={meme.imageUrl}
+                  alt={meme.title}
                   style={{ width: '100%', borderRadius: 8 }}
                 />
-                <p>{meme.caption}</p>
+                <p>{meme.title}</p>
                 <small>
-                  📅 {new Date(meme.uploadedAt || meme.created).toLocaleDateString()}
+                  📅 {new Date(meme.uploadDate).toLocaleDateString()}
                 </small>
-                <button onClick={() => handleDelete(meme._id || meme.public_id)}>
+                <button onClick={() => handleDelete(meme.id || meme.publicId)}>
                   🗑️ Delete
                 </button>
               </div>
