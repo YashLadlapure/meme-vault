@@ -35,6 +35,7 @@ let memes = [];
 
 app.get('/api/memes', (req, res) => res.json(memes));
 
+
 app.post('/api/memes', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
   const { title, category } = req.body;
