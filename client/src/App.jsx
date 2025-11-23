@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './app.css';
 
-const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Change to your actual Vercel backend
+const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // Change to your backend URL
 
 const Loader = () => (
   <div style={{ textAlign: 'center', padding: '50px 0' }}>
@@ -10,6 +10,51 @@ const Loader = () => (
     <div style={{ marginTop: 12, color: 'var(--primary-dark)' }}>Loading...</div>
   </div>
 );
+
+const AboutModal = ({ open, onClose }) =>
+  open && (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(40,10,50,0.5)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', zIndex: 9998
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 16,
+          boxShadow: 'var(--shadow)',
+          padding: 36,
+          maxWidth: 390,
+          width: '90%',
+          position: 'relative',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          style={{
+            position: 'absolute', top: 14, right: 14,
+            background: 'var(--primary)', color: 'white',
+            border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer'
+          }}
+          onClick={onClose}
+        >&times;</button>
+        <h2 style={{ fontWeight: 700 }}>About This Project</h2>
+        <p style={{ margin: '14px 0 6px 0', fontSize: '1.1em' }}>
+          <b>Meme Vault</b> is a full-stack cloud meme sharing app I built using MERN, hosted on Vercel and Cloudinary for image storage.<br/>
+          <b>Features:</b> drag & drop uploads, gallery, instant search, fully responsive UI.
+        </p>
+        <hr/>
+        <p style={{ margin: '14px 0 0 0', fontSize: '1em' }}>
+          <b>Made by:</b> <span style={{ color: 'var(--primary-dark)' }}>Yash Santosh Ladlapure</span><br/>
+          MIT-WPU | BTech | <a href="https://yashladlapure.github.io/portfolio-website" target="_blank" rel="noopener noreferrer">Portfolio</a>
+        </p>
+      </div>
+    </div>
+  );
 
 const App = () => {
   const [memes, setMemes] = useState([]);
@@ -23,10 +68,9 @@ const App = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [toast, setToast] = useState('');
+  const [aboutOpen, setAboutOpen] = useState(false);
 
-  useEffect(() => {
-    fetchMemes();
-  }, []);
+  useEffect(() => { fetchMemes(); }, []);
 
   const fetchMemes = async () => {
     try {
@@ -34,7 +78,7 @@ const App = () => {
       setInitialLoad(true);
       const response = await axios.get(`${API_URL}/memes`);
       setMemes(response.data);
-    } catch (error) {
+    } catch {
       setError('Failed to fetch memes. Make sure backend is running!');
       showToast('❌ Failed to fetch memes!');
     } finally {
@@ -108,7 +152,7 @@ const App = () => {
       setSuccess('✅ Meme uploaded successfully!');
       showToast('✅ Meme uploaded!');
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
+    } catch {
       setError('Failed to upload meme. Please try again.');
       showToast('❌ Upload failed!');
     } finally {
@@ -125,7 +169,7 @@ const App = () => {
         setSuccess('✅ Meme deleted successfully!');
         showToast('✅ Meme deleted!');
         setTimeout(() => setSuccess(''), 3000);
-      } catch (error) {
+      } catch {
         setError('Failed to delete meme. Please try again.');
         showToast('❌ Delete failed!');
       }
@@ -141,7 +185,22 @@ const App = () => {
       <header className="header">
         <div className="header-content">
           <h1 className="title">🎬 Meme Vault</h1>
-          <p className="subtitle">Your Local Meme Storage Solution (Full Stack)</p>
+          <p className="subtitle">
+            Your Local Meme Storage Solution (Full Stack)<br/>
+            <button
+              className="upload-btn"
+              style={{
+                margin: '18px auto 0 auto',
+                padding: '8px 18px',
+                fontSize: '0.93em',
+                boxShadow: 'none'
+              }}
+              onClick={() => setAboutOpen(true)}
+              type="button"
+            >
+              ℹ️ About This Project
+            </button>
+          </p>
           <div className="stats">
             <div className="stat-item">📸 {memes.length} Memes</div>
           </div>
@@ -273,7 +332,12 @@ const App = () => {
       </main>
 
       <footer className="footer">
-        Built with ❤️ using MERN & Cloudinary | Hosted Free
+        Built with ❤️ by <b>Yash Santosh Ladlapure</b> | MIT-WPU BTech<br/>
+        <a
+          href="https://yashladlapure.github.io/portfolio-website"
+          style={{ color: 'var(--primary)', textDecoration: 'underline'}}
+          target="_blank" rel="noopener noreferrer"
+        >Portfolio</a> | Hosted Free
       </footer>
 
       {toast && (
@@ -293,6 +357,8 @@ const App = () => {
           {toast}
         </div>
       )}
+
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 };
