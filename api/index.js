@@ -1,160 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './app.css';
+const express = require('express');
+const multer = require('multer');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <--- your deployed backend
+dotenv.config();
 
-const App = () => {
-  const [memes, setMemes] = useState([]);
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('');
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+const app = express();
 
-  useEffect(() => {
-    fetchMemes();
-  }, []);
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-  const fetchMemes = async () => {
-    try {
-      setError('');
-      const response = await axios.get(`${API_URL}/memes`);
-      setMemes(response.data);
-    } catch (err) {
-      setError('Failed to fetch memes. Make sure backend is running!');
-    }
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'meme-vault',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+  },
+});
+const upload = multer({ storage });
+
+app.use(cors({ origin: 'https://yashladlapure.github.io' }));
+app.use(express.json());
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
+
+let memes = [];
+
+app.get('/api/memes', (req, res) => res.json(memes));
+
+app.post('/api/memes', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+  const { title, category } = req.body;
+  const newMeme = {
+    id: Date.now().toString(),
+    title: title || 'Untitled Meme',
+    category: category || 'general',
+    imageUrl: req.file.path,
+    publicId: req.file.filename,
+    uploadDate: new Date().toISOString(),
   };
+  memes.unshift(newMeme);
+  res.status(201).json(newMeme);
+});
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.size <= 10 * 1024 * 1024) {
-      setImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result);
-      reader.readAsDataURL(file);
-    } else {
-      setError('File size must be less than 10MB');
-    }
-  };
+app.delete('/api/memes/:id', async (req, res) => {
+  const { id } = req.params;
+  const index = memes.findIndex((m) => m.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Meme not found' });
+  const meme = memes[index];
+  if (meme.publicId) await cloudinary.uploader.destroy(meme.publicId);
+  memes.splice(index, 1);
+  res.json({ message: 'Meme deleted successfully', meme });
+});
 
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    if (!image) { setError('Please select an image'); return; }
-    if (!title.trim()) { setError('Please add a title'); return; }
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Meme Vault API',
+    endpoints: {
+      'GET /api/memes': 'Get all memes',
+      'POST /api/memes': 'Upload new meme',
+      'DELETE /api/memes/:id': 'Delete meme by ID',
+    },
+  });
+});
 
-    setLoading(true);
-    setUploadProgress(0);
-
-    const formData = new FormData();
-    formData.append('image', image);
-    formData.append('title', title);
-    formData.append('category', category);
-
-    try {
-      const response = await axios.post(`${API_URL}/memes`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) =>
-          setUploadProgress(Math.round((e.loaded * 100) / e.total))
-      });
-      setMemes([response.data, ...memes]);
-      setTitle('');
-      setCategory('');
-      setImage(null);
-      setPreview(null);
-      setSuccess('✅ Meme uploaded!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('Failed to upload meme. Please try again.');
-    } finally {
-      setLoading(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this meme?')) return;
-    try {
-      await axios.delete(`${API_URL}/memes/${id}`);
-      setMemes(memes.filter(m => m.id !== id));
-      setSuccess('✅ Meme deleted!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch {
-      setError('Failed to delete meme. Please try again.');
-    }
-  };
-
-  const filteredMemes = memes.filter(meme =>
-    (meme.title || '').toLowerCase().includes(searchTerm.toLowerCase())
-    || (meme.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className="app">
-      <header>
-        <h1>🎬 Meme Vault</h1>
-        <span>{memes.length} Memes</span>
-      </header>
-      <form onSubmit={handleUpload}>
-        {error && <div className="alert error">{error}</div>}
-        {success && <div className="alert success">{success}</div>}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-        />
-        {preview && (
-          <div>
-            <img src={preview} alt="Preview" width={180} />
-            <button type="button" onClick={() => { setImage(null); setPreview(null); }}>Remove</button>
-          </div>
-        )}
-        <input
-          type="text"
-          value={title}
-          placeholder="Title"
-          onChange={e => setTitle(e.target.value)}
-        />
-        <input
-          type="text"
-          value={category}
-          placeholder="Category"
-          onChange={e => setCategory(e.target.value)}
-        />
-        {loading && <div>{uploadProgress}%</div>}
-        <button type="submit" disabled={loading}>Upload</button>
-      </form>
-
-      <input
-        type="text"
-        placeholder="🔍 Search memes..."
-        value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
-      />
-      <div className="gallery">
-        {filteredMemes.length === 0 ? (
-          <div>No memes yet!</div>
-        ) : (
-          filteredMemes.map(meme => (
-            <div key={meme.id} className="meme">
-              <img src={meme.imageUrl} alt={meme.title} width={220} />
-              <p>{meme.title} <br /><i>{meme.category}</i></p>
-              <button onClick={() => handleDelete(meme.id)}>🗑️</button>
-            </div>
-          ))
-        )}
-      </div>
-      <footer>
-        Built with MERN & Cloudinary, Hosted Free
-      </footer>
-    </div>
-  );
-};
-
-export default App;
+module.exports = app;
