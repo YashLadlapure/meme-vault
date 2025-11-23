@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './app.css';
 
-const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Change to your actual deployed backend!
+const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Change to your actual Vercel backend
+
+const Loader = () => (
+  <div style={{ textAlign: 'center', padding: '50px 0' }}>
+    <span style={{ fontSize: '2.6em', color: 'var(--primary)' }}>⏳</span>
+    <div style={{ marginTop: 12, color: 'var(--primary-dark)' }}>Loading...</div>
+  </div>
+);
 
 const App = () => {
   const [memes, setMemes] = useState([]);
@@ -10,10 +17,12 @@ const App = () => {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [toast, setToast] = useState('');
 
   useEffect(() => {
     fetchMemes();
@@ -22,19 +31,23 @@ const App = () => {
   const fetchMemes = async () => {
     try {
       setError('');
+      setInitialLoad(true);
       const response = await axios.get(`${API_URL}/memes`);
       setMemes(response.data);
     } catch (error) {
       setError('Failed to fetch memes. Make sure backend is running!');
+      showToast('❌ Failed to fetch memes!');
+    } finally {
+      setInitialLoad(false);
     }
   };
 
-  // Image file input change
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
         setError('File size must be less than 10MB');
+        showToast('❌ Image must be <10MB!');
         return;
       }
       setImage(file);
@@ -44,10 +57,19 @@ const App = () => {
     }
   };
 
-  // Title/caption input change
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleImageChange({ target: { files: [file] } });
+  };
+
   const handleTitleChange = (e) => setTitle(e.target.value);
 
-  // Upload form submit
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
+
   const handleUpload = async (e) => {
     e.preventDefault();
     setError('');
@@ -55,10 +77,12 @@ const App = () => {
 
     if (!image) {
       setError('Please select an image');
+      showToast('❌ Select an image!');
       return;
     }
     if (!title.trim()) {
       setError('Please add a caption/title');
+      showToast('❌ Add a caption/title!');
       return;
     }
 
@@ -82,25 +106,28 @@ const App = () => {
       setImage(null);
       setPreview(null);
       setSuccess('✅ Meme uploaded successfully!');
+      showToast('✅ Meme uploaded!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       setError('Failed to upload meme. Please try again.');
+      showToast('❌ Upload failed!');
     } finally {
       setLoading(false);
       setUploadProgress(0);
     }
   };
 
-  // Delete meme
   const handleDelete = async (id) => {
     if (window.confirm('Delete this meme?')) {
       try {
         await axios.delete(`${API_URL}/memes/${id}`);
         setMemes(memes.filter(m => m.id !== id && m.publicId !== id));
         setSuccess('✅ Meme deleted successfully!');
+        showToast('✅ Meme deleted!');
         setTimeout(() => setSuccess(''), 3000);
       } catch (error) {
         setError('Failed to delete meme. Please try again.');
+        showToast('❌ Delete failed!');
       }
     }
   };
@@ -122,25 +149,37 @@ const App = () => {
       </header>
 
       <main className="container">
-        <section className="upload-section">
+
+        <section
+          className="upload-section"
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+        >
           <h2>Upload Meme</h2>
           <form className="upload-form" onSubmit={handleUpload}>
             {error && <div className="alert alert-error">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
 
             <label className="file-input-label">
-              <div className="file-input-box">
+              <div
+                className="file-input-box"
+                style={{ borderStyle: image ? 'solid' : 'dashed', cursor: 'pointer' }}
+              >
                 <span className="upload-icon">📁</span>
-                <span className="upload-text">Choose File</span>
+                <span className="upload-text">
+                  {image ? 'Image ready!' : 'Drag & drop or click to choose'}
+                </span>
                 <span className="upload-subtext">Image files (max 10MB)</span>
                 <input
                   type="file"
                   accept="image/*"
                   className="file-input"
                   onChange={handleImageChange}
+                  style={{ display: 'none' }}
                 />
               </div>
             </label>
+
             {preview && (
               <div className="image-preview-container">
                 <div className="preview">
@@ -171,20 +210,13 @@ const App = () => {
 
             {loading && (
               <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${uploadProgress}%` }}
-                >
+                <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
                   {uploadProgress}%
                 </div>
               </div>
             )}
 
-            <button 
-              className="upload-btn" 
-              type="submit" 
-              disabled={loading}
-            >
+            <button className="upload-btn" type="submit" disabled={loading}>
               {loading ? 'Uploading...' : '🚀 Upload Meme'}
             </button>
           </form>
@@ -202,7 +234,9 @@ const App = () => {
             />
           </div>
           <div className="gallery-grid">
-            {filteredMemes.length === 0 ? (
+            {initialLoad ? (
+              <Loader />
+            ) : filteredMemes.length === 0 ? (
               <div className="empty-state">
                 <span className="empty-icon" role="img" aria-label="empty">😶</span>
                 <p>No memes yet. Be the first to upload one!</p>
@@ -210,23 +244,26 @@ const App = () => {
             ) : (
               filteredMemes.map(meme => (
                 <div key={meme.id || meme.publicId} className="meme-card">
-                  <div className="meme-image-container">
+                  <div className="meme-image-container" style={{ position: 'relative' }}>
                     <img
                       className="meme-image"
                       src={meme.imageUrl}
                       alt={meme.title}
                     />
+                    <div className="meme-actions">
+                      <button
+                        className="delete-btn"
+                        style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
+                        type="button"
+                        onClick={() => handleDelete(meme.id || meme.publicId)}
+                      >🗑️</button>
+                    </div>
                   </div>
                   <div className="meme-info">
                     <p className="meme-caption">{meme.title}</p>
                     <small className="meme-date">
                       📅 {new Date(meme.uploadDate).toLocaleDateString()}
                     </small>
-                    <button 
-                      className="delete-btn"
-                      type="button"
-                      onClick={() => handleDelete(meme.id || meme.publicId)}
-                    >🗑️ Delete</button>
                   </div>
                 </div>
               ))
@@ -238,6 +275,24 @@ const App = () => {
       <footer className="footer">
         Built with ❤️ using MERN & Cloudinary | Hosted Free
       </footer>
+
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 40,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--primary-dark)',
+          color: 'white',
+          padding: '18px 32px',
+          borderRadius: '14px',
+          boxShadow: 'var(--shadow)',
+          zIndex: 9999,
+          fontWeight: 600
+        }}>
+          {toast}
+        </div>
+      )}
     </div>
   );
 };
