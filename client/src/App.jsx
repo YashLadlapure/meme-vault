@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './app.css';
 
-const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // Change to your backend URL
+const API_URL = '/api'; // Relative path for Vercel fullstack deploy
 
 const Loader = () => (
   <div style={{ textAlign: 'center', padding: '50px 0' }}>
@@ -10,51 +10,6 @@ const Loader = () => (
     <div style={{ marginTop: 12, color: 'var(--primary-dark)' }}>Loading...</div>
   </div>
 );
-
-const AboutModal = ({ open, onClose }) =>
-  open && (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(40,10,50,0.5)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', zIndex: 9998
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          boxShadow: 'var(--shadow)',
-          padding: 36,
-          maxWidth: 390,
-          width: '90%',
-          position: 'relative',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <button
-          style={{
-            position: 'absolute', top: 14, right: 14,
-            background: 'var(--primary)', color: 'white',
-            border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer'
-          }}
-          onClick={onClose}
-        >&times;</button>
-        <h2 style={{ fontWeight: 700 }}>About This Project</h2>
-        <p style={{ margin: '14px 0 6px 0', fontSize: '1.1em' }}>
-          <b>Meme Vault</b> is a full-stack cloud meme sharing app I built using MERN, hosted on Vercel and Cloudinary for image storage.<br/>
-          <b>Features:</b> drag & drop uploads, gallery, instant search, fully responsive UI.
-        </p>
-        <hr/>
-        <p style={{ margin: '14px 0 0 0', fontSize: '1em' }}>
-          <b>Made by:</b> <span style={{ color: 'var(--primary-dark)' }}>Yash Santosh Ladlapure</span><br/>
-          MIT-WPU | BTech | <a href="https://yashladlapure.github.io/portfolio-website" target="_blank" rel="noopener noreferrer">Portfolio</a>
-        </p>
-      </div>
-    </div>
-  );
 
 const App = () => {
   const [memes, setMemes] = useState([]);
@@ -67,10 +22,10 @@ const App = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [toast, setToast] = useState('');
-  const [aboutOpen, setAboutOpen] = useState(false);
 
-  useEffect(() => { fetchMemes(); }, []);
+  useEffect(() => {
+    fetchMemes();
+  }, []);
 
   const fetchMemes = async () => {
     try {
@@ -80,7 +35,6 @@ const App = () => {
       setMemes(response.data);
     } catch {
       setError('Failed to fetch memes. Make sure backend is running!');
-      showToast('❌ Failed to fetch memes!');
     } finally {
       setInitialLoad(false);
     }
@@ -91,7 +45,6 @@ const App = () => {
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
         setError('File size must be less than 10MB');
-        showToast('❌ Image must be <10MB!');
         return;
       }
       setImage(file);
@@ -101,18 +54,7 @@ const App = () => {
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    handleImageChange({ target: { files: [file] } });
-  };
-
   const handleTitleChange = (e) => setTitle(e.target.value);
-
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2500);
-  };
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -121,12 +63,10 @@ const App = () => {
 
     if (!image) {
       setError('Please select an image');
-      showToast('❌ Select an image!');
       return;
     }
     if (!title.trim()) {
       setError('Please add a caption/title');
-      showToast('❌ Add a caption/title!');
       return;
     }
 
@@ -150,11 +90,9 @@ const App = () => {
       setImage(null);
       setPreview(null);
       setSuccess('✅ Meme uploaded successfully!');
-      showToast('✅ Meme uploaded!');
       setTimeout(() => setSuccess(''), 3000);
     } catch {
       setError('Failed to upload meme. Please try again.');
-      showToast('❌ Upload failed!');
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -167,11 +105,9 @@ const App = () => {
         await axios.delete(`${API_URL}/memes/${id}`);
         setMemes(memes.filter(m => m.id !== id && m.publicId !== id));
         setSuccess('✅ Meme deleted successfully!');
-        showToast('✅ Meme deleted!');
         setTimeout(() => setSuccess(''), 3000);
       } catch {
         setError('Failed to delete meme. Please try again.');
-        showToast('❌ Delete failed!');
       }
     }
   };
@@ -185,49 +121,23 @@ const App = () => {
       <header className="header">
         <div className="header-content">
           <h1 className="title">🎬 Meme Vault</h1>
-          <p className="subtitle">
-            Your Local Meme Storage Solution (Full Stack)<br/>
-            <button
-              className="upload-btn"
-              style={{
-                margin: '18px auto 0 auto',
-                padding: '8px 18px',
-                fontSize: '0.93em',
-                boxShadow: 'none'
-              }}
-              onClick={() => setAboutOpen(true)}
-              type="button"
-            >
-              ℹ️ About This Project
-            </button>
-          </p>
+          <p className="subtitle">Your Local Meme Storage Solution (Full Stack)</p>
           <div className="stats">
             <div className="stat-item">📸 {memes.length} Memes</div>
           </div>
         </div>
       </header>
-
       <main className="container">
-
-        <section
-          className="upload-section"
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-        >
+        <section className="upload-section">
           <h2>Upload Meme</h2>
           <form className="upload-form" onSubmit={handleUpload}>
             {error && <div className="alert alert-error">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
 
             <label className="file-input-label">
-              <div
-                className="file-input-box"
-                style={{ borderStyle: image ? 'solid' : 'dashed', cursor: 'pointer' }}
-              >
+              <div className="file-input-box">
                 <span className="upload-icon">📁</span>
-                <span className="upload-text">
-                  {image ? 'Image ready!' : 'Drag & drop or click to choose'}
-                </span>
+                <span className="upload-text">Choose File</span>
                 <span className="upload-subtext">Image files (max 10MB)</span>
                 <input
                   type="file"
@@ -238,7 +148,6 @@ const App = () => {
                 />
               </div>
             </label>
-
             {preview && (
               <div className="image-preview-container">
                 <div className="preview">
@@ -330,35 +239,10 @@ const App = () => {
           </div>
         </section>
       </main>
-
       <footer className="footer">
-        Built with ❤️ by <b>Yash Santosh Ladlapure</b> | MIT-WPU BTech<br/>
-        <a
-          href="https://yashladlapure.github.io/portfolio-website"
-          style={{ color: 'var(--primary)', textDecoration: 'underline'}}
-          target="_blank" rel="noopener noreferrer"
-        >Portfolio</a> | Hosted Free
+        Built with ❤️ by <b>Yash Santosh Ladlapure</b> | MIT-WPU<br />
+        Hosted Free on Vercel
       </footer>
-
-      {toast && (
-        <div style={{
-          position: 'fixed',
-          bottom: 40,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--primary-dark)',
-          color: 'white',
-          padding: '18px 32px',
-          borderRadius: '14px',
-          boxShadow: 'var(--shadow)',
-          zIndex: 9999,
-          fontWeight: 600
-        }}>
-          {toast}
-        </div>
-      )}
-
-      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 };
