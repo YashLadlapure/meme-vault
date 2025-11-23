@@ -9,12 +9,14 @@ dotenv.config();
 
 const app = express();
 
+// Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Multer/Cloudinary storage setup
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -24,15 +26,18 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage });
 
-app.use(cors({ origin: 'https://yashladlapure.github.io' }));
+// Middleware
+app.use(cors({ origin: 'https://yashladlapure.github.io' })); // allow your frontend to call API
 app.use(express.json());
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   next();
 });
 
+// In-memory storage for memes (for demo; swap with DB for production)
 let memes = [];
 
+// Routes
 app.get('/api/memes', (req, res) => res.json(memes));
 
 app.post('/api/memes', upload.single('image'), (req, res) => {
@@ -62,13 +67,14 @@ app.delete('/api/memes/:id', async (req, res) => {
 
 app.get('/api', (req, res) => {
   res.json({
-    message: 'Meme Vault API',
+    message: 'Meme Vault API is running!',
     endpoints: {
-      'GET /api/memes': 'Get all memes',
-      'POST /api/memes': 'Upload new meme',
-      'DELETE /api/memes/:id': 'Delete meme by ID',
-    },
+      'GET /api/memes': 'List all memes',
+      'POST /api/memes': 'Upload meme',
+      'DELETE /api/memes/:id': 'Delete meme'
+    }
   });
 });
 
+// Vercel serverless export
 module.exports = app;
