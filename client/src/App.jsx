@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './app.css';
 
-const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Replace with your actual Vercel backend URL
+const API_URL = 'https://your-vercel-app-url.vercel.app/api'; // <-- Change to your actual deployed backend!
 
 const App = () => {
   const [memes, setMemes] = useState([]);
@@ -29,6 +29,7 @@ const App = () => {
     }
   };
 
+  // Image file input change
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -43,8 +44,10 @@ const App = () => {
     }
   };
 
+  // Title/caption input change
   const handleTitleChange = (e) => setTitle(e.target.value);
 
+  // Upload form submit
   const handleUpload = async (e) => {
     e.preventDefault();
     setError('');
@@ -54,7 +57,6 @@ const App = () => {
       setError('Please select an image');
       return;
     }
-
     if (!title.trim()) {
       setError('Please add a caption/title');
       return;
@@ -75,7 +77,6 @@ const App = () => {
           setUploadProgress(progress);
         }
       });
-
       setMemes([response.data, ...memes]);
       setTitle('');
       setImage(null);
@@ -90,6 +91,7 @@ const App = () => {
     }
   };
 
+  // Delete meme
   const handleDelete = async (id) => {
     if (window.confirm('Delete this meme?')) {
       try {
@@ -110,67 +112,132 @@ const App = () => {
   return (
     <div className="app">
       <header className="header">
-        <h1>🎬 Meme Vault</h1>
-        <p>Your Local Meme Storage Solution (Full Stack)</p>
-        <span>📸 {memes.length} Memes</span>
+        <div className="header-content">
+          <h1 className="title">🎬 Meme Vault</h1>
+          <p className="subtitle">Your Local Meme Storage Solution (Full Stack)</p>
+          <div className="stats">
+            <div className="stat-item">📸 {memes.length} Memes</div>
+          </div>
+        </div>
       </header>
 
-      <main>
-        <form onSubmit={handleUpload}>
-          {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
-          <input type="file" accept="image/*" onChange={handleImageChange} />
-          {preview && (
-            <div>
-              <img src={preview} alt="Preview" style={{ width: 200 }} />
-              <button type="button" onClick={() => { setImage(null); setPreview(null); }}>Remove</button>
-            </div>
-          )}
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Add a witty caption..."
-            maxLength={200}
-          />
-          {loading && <div>{uploadProgress}%</div>}
-          <button type="submit" disabled={loading}>
-            {loading ? 'Uploading...' : '🚀 Upload Meme'}
-          </button>
-        </form>
+      <main className="container">
+        <section className="upload-section">
+          <h2>Upload Meme</h2>
+          <form className="upload-form" onSubmit={handleUpload}>
+            {error && <div className="alert alert-error">{error}</div>}
+            {success && <div className="alert alert-success">{success}</div>}
 
-        <input
-          type="text"
-          placeholder="🔍 Search memes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-
-        <div className="gallery">
-          {filteredMemes.length === 0 ? (
-            <div>No memes yet. Be the first to upload one!</div>
-          ) : (
-            filteredMemes.map(meme => (
-              <div key={meme.id || meme.publicId} className="meme-card">
-                <img
-                  src={meme.imageUrl}
-                  alt={meme.title}
-                  style={{ width: '100%', borderRadius: 8 }}
+            <label className="file-input-label">
+              <div className="file-input-box">
+                <span className="upload-icon">📁</span>
+                <span className="upload-text">Choose File</span>
+                <span className="upload-subtext">Image files (max 10MB)</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="file-input"
+                  onChange={handleImageChange}
                 />
-                <p>{meme.title}</p>
-                <small>
-                  📅 {new Date(meme.uploadDate).toLocaleDateString()}
-                </small>
-                <button onClick={() => handleDelete(meme.id || meme.publicId)}>
-                  🗑️ Delete
-                </button>
               </div>
-            ))
-          )}
-        </div>
+            </label>
+            {preview && (
+              <div className="image-preview-container">
+                <div className="preview">
+                  <img className="preview-img" src={preview} alt="Preview" />
+                  <button
+                    type="button"
+                    className="remove-btn"
+                    onClick={() => { setImage(null); setPreview(null); }}
+                  >&times;</button>
+                </div>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="caption">Caption/Title</label>
+              <input
+                id="caption"
+                className="caption-input"
+                type="text"
+                value={title}
+                onChange={handleTitleChange}
+                placeholder="Add a witty caption..."
+                maxLength={200}
+                required
+              />
+              <div className="char-count">{title.length}/200</div>
+            </div>
+
+            {loading && (
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${uploadProgress}%` }}
+                >
+                  {uploadProgress}%
+                </div>
+              </div>
+            )}
+
+            <button 
+              className="upload-btn" 
+              type="submit" 
+              disabled={loading}
+            >
+              {loading ? 'Uploading...' : '🚀 Upload Meme'}
+            </button>
+          </form>
+        </section>
+
+        <section className="gallery-section">
+          <div className="gallery-header">
+            <h2>Meme Gallery</h2>
+            <input
+              className="search-input"
+              type="text"
+              placeholder="🔍 Search memes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="gallery-grid">
+            {filteredMemes.length === 0 ? (
+              <div className="empty-state">
+                <span className="empty-icon" role="img" aria-label="empty">😶</span>
+                <p>No memes yet. Be the first to upload one!</p>
+              </div>
+            ) : (
+              filteredMemes.map(meme => (
+                <div key={meme.id || meme.publicId} className="meme-card">
+                  <div className="meme-image-container">
+                    <img
+                      className="meme-image"
+                      src={meme.imageUrl}
+                      alt={meme.title}
+                    />
+                  </div>
+                  <div className="meme-info">
+                    <p className="meme-caption">{meme.title}</p>
+                    <small className="meme-date">
+                      📅 {new Date(meme.uploadDate).toLocaleDateString()}
+                    </small>
+                    <button 
+                      className="delete-btn"
+                      type="button"
+                      onClick={() => handleDelete(meme.id || meme.publicId)}
+                    >🗑️ Delete</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </main>
 
-      <footer>Built with ❤️ using MERN & Cloudinary | Hosted Free</footer>
+      <footer className="footer">
+        Built with ❤️ using MERN & Cloudinary | Hosted Free
+      </footer>
     </div>
   );
 };
