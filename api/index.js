@@ -27,9 +27,7 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 
 // CORS setup: Allow frontend requests from deployed domain
-app.use(cors({
-  origin: 'https://meme-vault-x46t.vercel.app' // Replace with your actual frontend domain
-}));
+app.use(cors());
 
 app.use(express.json());
 app.use((req, res, next) => {
