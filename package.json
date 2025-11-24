@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node api/index.js",     
-    "dev": "nodemon api/index.js",
-        "build": "vite build"
+    "dev": "nodemon api/index.js"
   },
   "keywords": [
     "meme",
