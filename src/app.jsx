@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './app.css';
 
-const API_URL = 'https://meme-vault-x46t.vercel.app';
-// OR just '/api' if your frontend and backend are a single Vercel project
-// Relative path for Vercel fullstack deploy
+const API_URL = '/api';
 
 const Loader = () => (
   <div style={{ textAlign: 'center', padding: '50px 0' }}>
