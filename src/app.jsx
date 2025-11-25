@@ -22,10 +22,21 @@ const App = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   useEffect(() => {
     fetchMemes();
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('dark-mode', darkMode);
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
+
+  const toggleDarkMode = () => setDarkMode(!darkMode);
 
   const fetchMemes = async () => {
     try {
@@ -60,7 +71,6 @@ const App = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-
     if (!image) {
       setError('Please select an image');
       return;
@@ -69,14 +79,11 @@ const App = () => {
       setError('Please add a caption/title');
       return;
     }
-
     setLoading(true);
     setUploadProgress(0);
-
     const formData = new FormData();
     formData.append('image', image);
     formData.append('title', title);
-
     try {
       const response = await axios.post(`${API_URL}/memes`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -120,6 +127,9 @@ const App = () => {
     <div className="app">
       <header className="header">
         <div className="header-content">
+          <button className="theme-toggle" onClick={toggleDarkMode} title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+            {darkMode ? '☀️' : '🌙'}
+          </button>
           <h1 className="title">🎬 Meme Vault</h1>
           <p className="subtitle">Your Local Meme Storage Solution (Full Stack)</p>
           <div className="stats">
@@ -127,13 +137,13 @@ const App = () => {
           </div>
         </div>
       </header>
+
       <main className="container">
         <section className="upload-section">
           <h2>Upload Meme</h2>
           <form className="upload-form" onSubmit={handleUpload}>
             {error && <div className="alert alert-error">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
-
             <label className="file-input-label">
               <div className="file-input-box">
                 <span className="upload-icon">📁</span>
@@ -156,11 +166,10 @@ const App = () => {
                     type="button"
                     className="remove-btn"
                     onClick={() => { setImage(null); setPreview(null); }}
-                  >&times;</button>
+                  >×</button>
                 </div>
               </div>
             )}
-
             <div className="form-group">
               <label htmlFor="caption">Caption/Title</label>
               <input
@@ -175,7 +184,6 @@ const App = () => {
               />
               <div className="char-count">{title.length}/200</div>
             </div>
-
             {loading && (
               <div className="progress-bar">
                 <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
@@ -183,7 +191,6 @@ const App = () => {
                 </div>
               </div>
             )}
-
             <button className="upload-btn" type="submit" disabled={loading}>
               {loading ? 'Uploading...' : '🚀 Upload Meme'}
             </button>
@@ -239,6 +246,7 @@ const App = () => {
           </div>
         </section>
       </main>
+
       <footer className="footer">
         Built with ❤️ by <b>Yash Santosh Ladlapure</b> | MIT-WPU<br />
         Hosted Free on Vercel
