@@ -550,3 +550,72 @@ h2 {
     box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
   }
 }
+/* Dark Mode Styles */
+body.dark-mode {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #e0e0e0;
+}
+
+body.dark-mode .upload-section,
+body.dark-mode .gallery-section {
+  background: #1e1e2f;
+  color: #e0e0e0;
+}
+
+body.dark-mode h2 {
+  color: #a78bfa;
+}
+
+body.dark-mode .meme-card {
+  background: #2d2d44;
+}
+
+body.dark-mode .meme-caption {
+  color: #e0e0e0;
+}
+
+body.dark-mode .caption-input,
+body.dark-mode .search-input {
+  background: #2d2d44;
+  border-color: #404060;
+  color: #e0e0e0;
+}
+
+body.dark-mode .file-input-box {
+  border-color: #a78bfa;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+body.dark-mode .upload-text,
+body.dark-mode .form-group label {
+  color: #e0e0e0;
+}
+
+body.dark-mode .stat-item {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Toggle button styling */
+.theme-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.3em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.header-content {
+  position: relative;
+}
+
