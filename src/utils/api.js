@@ -2,8 +2,7 @@
 
 // No trailing slash
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'https://meme-vault-x46t.vercel.app';
-
+import.meta.env.VITE_API_URL || 'https://meme-vault-x46t.vercel.app/api'
 const buildUrl = (endpoint) =>
   `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
