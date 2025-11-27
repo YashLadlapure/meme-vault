@@ -24,3 +24,4 @@ export default function App() {
     </Router>
   );
 }
+// JWT Frontend deployed
