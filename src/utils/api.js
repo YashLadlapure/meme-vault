@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meme-vault-x46t.vercel.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meme-vault-x46t.vercel.app/';
 
 export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
@@ -16,23 +16,24 @@ export const apiCall = async (endpoint, options = {}) => {
     headers,
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    throw new Error(data.message || 'API request failed');
   }
 
-  return response.json();
+  return data;
 };
 
 export const authAPI = {
   register: (username, email, password) =>
-    apiCall('/api/auth/register', {
+    apiCall('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, email, password }),
     }),
 
   login: (email, password) =>
-    apiCall('/api/auth/login', {
+    apiCall('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
@@ -43,33 +44,32 @@ export const memeAPI = {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    formData.append('file', file); // Note: backend expects 'image', not 'file'
+    formData.append('file', file);
 
-    const token = localStorage.getItem('token');
     const headers = {};
+    const token = localStorage.getItem('token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    return fetch(`${API_BASE_URL}/api/memes`, {
+    return fetch(`${API_BASE_URL}/memes`, {
       method: 'POST',
       headers,
       body: formData,
-    }).then(async (res) => {
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || 'Upload failed');
-      }
-      return res.json();
-    });
+    }).then(res => res.json());
   },
 
-  getMemes: () => apiCall('/api/memes'),
+  getMemes: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/memes${query ? '?' + query : ''}`);
+  },
 
-  deleteMeme: (id) => apiCall(`/api/memes/${id}`, { method: 'DELETE' }),
+  deleteMeme: (id) =>
+    apiCall(`/memes/${id}`, { method: 'DELETE' }),
 
-  updateMeme: (id, data) => apiCall(`/api/memes/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
+  updateMeme: (id, data) =>
+    apiCall(`/memes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 };
