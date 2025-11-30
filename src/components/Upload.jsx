@@ -23,7 +23,7 @@ const Upload = () => {
 
   const fetchFolders = async () => {
     try {
-      const response = await fetch`${API_BASE_URL}/api/folders`, {
+      const response = await fetch(`${API_BASE_URL}/api/folders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -50,7 +50,7 @@ const Upload = () => {
 
     setLoading(true);
     try {
-      const response = await fetch`${API_BASE_URL}/api/memes`, {
+      const response = await fetch(`${API_BASE_URL}/api/memes`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
