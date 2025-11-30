@@ -88,7 +88,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 const memeSchema = new mongoose.Schema(
   {
@@ -127,7 +127,7 @@ const memeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Meme = mongoose.model('Meme', memeSchema);
+const Meme = mongoose.models.Meme || mongoose.model('Meme', memeSchema);
 
 // ============ AUTH MIDDLEWARE ============
 const authMiddleware = (req, res, next) => {
@@ -399,4 +399,5 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Export for Vercel serverless
 module.exports = app;
