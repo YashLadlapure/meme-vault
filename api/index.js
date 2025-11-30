@@ -10,11 +10,14 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const app = express();
 
 // ============ CLOUDINARY CONFIG ============
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Only configure if credentials are available
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 const storage = new CloudinaryStorage({
   cloudinary,
@@ -38,12 +41,16 @@ app.use((req, res, next) => {
 let cachedConnection = null;
 
 const connectDB = async () => {
-  if (cachedConnection) {
+  if (cachedConnection && mongoose.connection.readyState === 1) {
     return cachedConnection;
   }
 
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/meme-vault';
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+
+    const mongoUri = process.env.MONGODB_URI;
     
     const connection = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
@@ -54,7 +61,7 @@ const connectDB = async () => {
     });
 
     cachedConnection = connection;
-    console.log('✅ MongoDB connected');
+    console.log('✅ MongoDB connected successfully');
     return connection;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
@@ -78,7 +85,8 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
-    match: [/.+@.+/, 'Please enter a valid email']    },
+      match: [/.+@.+/, 'Please enter a valid email']
+    },
     password: { 
       type: String, 
       required: [true, 'Password is required'],
@@ -155,11 +163,16 @@ const authMiddleware = (req, res, next) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
+    console.log('📝 Registration attempt started');
+    
     await connectDB();
+    console.log('✅ Database connected');
 
     const { username, email, password } = req.body;
+    console.log('📧 Registration data:', { username, email, passwordLength: password?.length });
 
     if (!username || !email || !password) {
+      console.log('❌ Missing fields');
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -168,11 +181,14 @@ app.post('/api/auth/register', async (req, res) => {
     });
     
     if (existingUser) {
+      console.log('❌ User already exists');
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    console.log('🔐 Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    console.log('💾 Creating new user...');
     const newUser = new User({ 
       username, 
       email: email.toLowerCase(), 
@@ -180,6 +196,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
     
     await newUser.save();
+    console.log('✅ User saved successfully');
 
     const token = jwt.sign(
       { userId: newUser._id, email: newUser.email },
@@ -187,6 +204,7 @@ app.post('/api/auth/register', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    console.log('✅ Registration successful');
     res.status(201).json({
       success: true,
       token,
@@ -196,7 +214,8 @@ app.post('/api/auth/register', async (req, res) => {
     console.error('❌ Register error:', error);
     res.status(500).json({ 
       message: 'Registration failed',
-      error: error.message 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -383,7 +402,7 @@ app.get('/api', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Database connection failed' });
+    res.status(500).json({ error: 'Database connection failed', details: error.message });
   }
 });
 
