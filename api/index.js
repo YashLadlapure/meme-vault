@@ -439,6 +439,10 @@ app.get('/api', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Database
+    res.status(500).json({ error: 'Database connection failed' });
+          }
+  })
+
+module.exports = app;
 
   module.exports = app;
