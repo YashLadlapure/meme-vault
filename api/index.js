@@ -6,11 +6,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
 const app = express();
 
 // ============ CLOUDINARY CONFIG ============
-// Only configure if credentials are available
 if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -51,7 +49,6 @@ const connectDB = async () => {
     }
 
     const mongoUri = process.env.MONGODB_URI;
-    
     const connection = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -70,67 +67,92 @@ const connectDB = async () => {
 };
 
 // ============ SCHEMAS & MODELS ============
-
 const userSchema = new mongoose.Schema(
   {
-    username: { 
-      type: String, 
+    username: {
+      type: String,
       required: [true, 'Username is required'],
       unique: true,
       trim: true,
-      minlength: [3, 'Username must be at least 3 characters']
+      minlength: [3, 'Username must be at least 3 characters'],
     },
-    email: { 
-      type: String, 
+    email: {
+      type: String,
       required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
-      match: [/.+@.+/, 'Please enter a valid email']
+      match: [/.+@.+/, 'Please enter a valid email'],
     },
-    password: { 
-      type: String, 
+    password: {
+      type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters']
-    }
+      minlength: [6, 'Password must be at least 6 characters'],
+    },
   },
   { timestamps: true }
 );
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
+// ============ FOLDER SCHEMA ============
+const folderSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Folder name is required'],
+      trim: true,
+      minlength: [1, 'Folder name cannot be empty'],
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    description: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    color: {
+      type: String,
+      default: '#3B82F6',
+    },
+  },
+  { timestamps: true }
+);
+
+const Folder = mongoose.models.Folder || mongoose.model('Folder', folderSchema);
+
+// ============ MEME SCHEMA ============
 const memeSchema = new mongoose.Schema(
   {
-    title: { 
-      type: String, 
+    title: {
+      type: String,
       required: [true, 'Title is required'],
-      trim: true 
+      trim: true,
     },
-    category: { 
-      type: String, 
-      default: 'general',
-      enum: ['general', 'funny', 'dark', 'tech', 'other']
+    folderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Folder',
+      required: true,
     },
-    imageUrl: { 
-      type: String, 
-      required: true 
+    imageUrl: {
+      type: String,
+      required: true,
     },
-    publicId: { 
-      type: String, 
-      required: true 
+    publicId: {
+      type: String,
+      required: true,
     },
-    userId: { 
-      type: mongoose.Schema.Types.ObjectId, 
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true 
+      required: true,
     },
-    likes: { 
-      type: Number, 
-      default: 0 
+    description: {
+      type: String,
+      default: '',
     },
-    likedBy: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User' 
-    }]
   },
   { timestamps: true }
 );
@@ -140,7 +162,6 @@ const Meme = mongoose.models.Meme || mongoose.model('Meme', memeSchema);
 // ============ AUTH MIDDLEWARE ============
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Access denied. No token provided.' });
   }
@@ -160,43 +181,31 @@ const authMiddleware = (req, res, next) => {
 };
 
 // ============ AUTH ROUTES ============
-
 app.post('/api/auth/register', async (req, res) => {
   try {
-    console.log('📝 Registration attempt started');
-    
     await connectDB();
-    console.log('✅ Database connected');
-
     const { username, email, password } = req.body;
-    console.log('📧 Registration data:', { username, email, passwordLength: password?.length });
 
     if (!username || !email || !password) {
-      console.log('❌ Missing fields');
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const existingUser = await User.findOne({ 
-      $or: [{ email: email.toLowerCase() }, { username }] 
+    const existingUser = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { username }],
     });
-    
+
     if (existingUser) {
-      console.log('❌ User already exists');
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    console.log('🔐 Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    console.log('💾 Creating new user...');
-    const newUser = new User({ 
-      username, 
-      email: email.toLowerCase(), 
-      password: hashedPassword 
+    const newUser = new User({
+      username,
+      email: email.toLowerCase(),
+      password: hashedPassword,
     });
-    
+
     await newUser.save();
-    console.log('✅ User saved successfully');
 
     const token = jwt.sign(
       { userId: newUser._id, email: newUser.email },
@@ -204,18 +213,16 @@ app.post('/api/auth/register', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    console.log('✅ Registration successful');
     res.status(201).json({
       success: true,
       token,
-      user: { id: newUser._id, username, email: newUser.email }
+      user: { id: newUser._id, username, email: newUser.email },
     });
   } catch (error) {
     console.error('❌ Register error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Registration failed',
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -223,7 +230,6 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     await connectDB();
-
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -231,13 +237,13 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
-    
+
     if (!validPassword) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -251,24 +257,95 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, username: user.username, email: user.email }
+      user: { id: user._id, username: user.username, email: user.email },
     });
   } catch (error) {
     console.error('❌ Login error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Login failed',
-      error: error.message 
+      error: error.message,
     });
   }
 });
 
-// ============ MEME ROUTES ============
-
-app.get('/api/memes', async (req, res) => {
+// ============ FOLDER ROUTES ============
+app.post('/api/folders', authMiddleware, async (req, res) => {
   try {
     await connectDB();
-    const memes = await Meme.find().sort({ createdAt: -1 }).populate('userId', 'username');
-    res.json({ memes });
+    const { name, description, color } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Folder name is required' });
+    }
+
+    const newFolder = new Folder({
+      name,
+      description: description || '',
+      color: color || '#3B82F6',
+      userId: req.user.userId,
+    });
+
+    await newFolder.save();
+    res.status(201).json(newFolder);
+  } catch (error) {
+    console.error('❌ Create folder error:', error);
+    res.status(500).json({ error: 'Failed to create folder', details: error.message });
+  }
+});
+
+app.get('/api/folders', authMiddleware, async (req, res) => {
+  try {
+    await connectDB();
+    const folders = await Folder.find({ userId: req.user.userId }).sort({ createdAt: -1 });
+    res.json({ folders });
+  } catch (error) {
+    console.error('❌ Get folders error:', error);
+    res.status(500).json({ error: 'Failed to fetch folders', details: error.message });
+  }
+});
+
+app.delete('/api/folders/:id', authMiddleware, async (req, res) => {
+  try {
+    await connectDB();
+    const { id } = req.params;
+
+    const folder = await Folder.findById(id);
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+
+    if (folder.userId.toString() !== req.user.userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this folder' });
+    }
+
+    // Delete all memes in folder
+    await Meme.deleteMany({ folderId: id });
+    await Folder.findByIdAndDelete(id);
+
+    res.json({ message: 'Folder deleted successfully' });
+  } catch (error) {
+    console.error('❌ Delete folder error:', error);
+    res.status(500).json({ error: 'Failed to delete folder', details: error.message });
+  }
+});
+
+// ============ MEME ROUTES ============
+app.get('/api/folders/:folderId/memes', authMiddleware, async (req, res) => {
+  try {
+    await connectDB();
+    const { folderId } = req.params;
+
+    const folder = await Folder.findById(folderId);
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+
+    if (folder.userId.toString() !== req.user.userId) {
+      return res.status(403).json({ error: 'Not authorized to access this folder' });
+    }
+
+    const memes = await Meme.find({ folderId }).sort({ createdAt: -1 });
+    res.json({ memes, folder });
   } catch (error) {
     console.error('❌ Get memes error:', error);
     res.status(500).json({ error: 'Failed to fetch memes', details: error.message });
@@ -289,19 +366,28 @@ app.post('/api/memes', authMiddleware, (req, res) => {
 
       await connectDB();
 
-      const { title, category } = req.body;
+      const { title, folderId, description } = req.body;
+
+      if (!folderId) {
+        return res.status(400).json({ error: 'Folder ID is required' });
+      }
+
+      // Verify folder ownership
+      const folder = await Folder.findById(folderId);
+      if (!folder || folder.userId.toString() !== req.user.userId) {
+        return res.status(403).json({ error: 'Not authorized to add memes to this folder' });
+      }
 
       const newMeme = new Meme({
         title: title || 'Untitled Meme',
-        category: category || 'general',
+        folderId,
         imageUrl: req.file.path,
         publicId: req.file.filename,
-        userId: req.user.userId
+        userId: req.user.userId,
+        description: description || '',
       });
 
       await newMeme.save();
-      await newMeme.populate('userId', 'username');
-
       res.status(201).json(newMeme);
     } catch (error) {
       console.error('❌ Save meme error:', error);
@@ -310,62 +396,12 @@ app.post('/api/memes', authMiddleware, (req, res) => {
   });
 });
 
-app.post('/api/memes/:id/like', async (req, res) => {
-  try {
-    await connectDB();
-    
-    const { id } = req.params;
-    const meme = await Meme.findById(id);
-    
-    if (!meme) {
-      return res.status(404).json({ error: 'Meme not found' });
-    }
-
-    meme.likes = (meme.likes || 0) + 1;
-    await meme.save();
-    
-    res.json({ id: meme._id, likes: meme.likes });
-  } catch (error) {
-    console.error('❌ Like meme error:', error);
-    res.status(500).json({ error: 'Failed to like meme', details: error.message });
-  }
-});
-
-app.patch('/api/memes/:id', authMiddleware, async (req, res) => {
-  try {
-    await connectDB();
-
-    const { id } = req.params;
-    const { title, category } = req.body;
-
-    const meme = await Meme.findById(id);
-    
-    if (!meme) {
-      return res.status(404).json({ error: 'Meme not found' });
-    }
-
-    if (meme.userId.toString() !== req.user.userId) {
-      return res.status(403).json({ error: 'Not authorized to update this meme' });
-    }
-
-    if (title) meme.title = title;
-    if (category) meme.category = category;
-
-    await meme.save();
-    res.json(meme);
-  } catch (error) {
-    console.error('❌ Update meme error:', error);
-    res.status(500).json({ error: 'Failed to update meme', details: error.message });
-  }
-});
-
 app.delete('/api/memes/:id', authMiddleware, async (req, res) => {
   try {
     await connectDB();
-
     const { id } = req.params;
+
     const meme = await Meme.findById(id);
-    
     if (!meme) {
       return res.status(404).json({ error: 'Meme not found' });
     }
@@ -379,7 +415,7 @@ app.delete('/api/memes/:id', authMiddleware, async (req, res) => {
     }
 
     await Meme.findByIdAndDelete(id);
-    res.json({ message: 'Meme deleted successfully', meme });
+    res.json({ message: 'Meme deleted successfully' });
   } catch (error) {
     console.error('❌ Delete meme error:', error);
     res.status(500).json({ error: 'Failed to delete meme', details: error.message });
@@ -394,29 +430,13 @@ app.get('/api', async (req, res) => {
       endpoints: {
         'POST /api/auth/register': 'Register user',
         'POST /api/auth/login': 'Login user',
-        'GET /api/memes': 'List all memes',
-        'POST /api/memes': 'Upload meme (protected)',
-        'PATCH /api/memes/:id': 'Update meme (protected)',
-        'POST /api/memes/:id/like': 'Like a meme',
-        'DELETE /api/memes/:id': 'Delete meme (protected)',
+        'POST /api/folders': 'Create folder',
+        'GET /api/folders': 'Get user folders',
+        'DELETE /api/folders/:id': 'Delete folder',
+        'GET /api/folders/:folderId/memes': 'Get memes in folder',
+        'POST /api/memes': 'Upload meme to folder',
+        'DELETE /api/memes/:id': 'Delete meme',
       },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Database connection failed', details: error.message });
-  }
-});
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-app.use((err, req, res, next) => {
-  console.error('❌ Global error:', err);
-  res.status(500).json({ 
-    error: 'Internal server error', 
-    details: err.message 
-  });
-});
-
-// Export for Vercel serverless
-module.exports = app;
+    res.status(500).json({ error: 'Database
