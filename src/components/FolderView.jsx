@@ -20,8 +20,7 @@ const FolderView = () => {
 
   const fetchMemes = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/folders/${folderId}/memes`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+ const response = await fetch(`${API_BASE_URL}/api/folders/${folderId}/memes`, {        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -40,8 +39,7 @@ const FolderView = () => {
   const deleteMeme = async (memeId) => {
     if (!window.confirm('Delete this meme?')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/memes/${memeId}`, {
-        method: 'DELETE',
+ const response = await fetch(`${API_BASE_URL}/api/memes/${memeId}`, {        method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
