@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Navbar from './Navbar';
@@ -6,6 +6,7 @@ import Navbar from './Navbar';
 const Upload = () => {
   const { token, user } = useContext(AuthContext);
   const navigate = useNavigate();
+   const API_BASE_URL = process.env.REACT_APP_API_URL || window.location.origin;
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState('');
   const [image, setImage] = useState(null);
@@ -15,14 +16,14 @@ const Upload = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!token) navigate('/login');
     fetchFolders();
   }, [token]);
 
   const fetchFolders = async () => {
     try {
-      const response = await fetch('https://api.example.com/api/folders', {
+      const response = await fetch`${API_BASE_URL}/api/folders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -49,7 +50,7 @@ const Upload = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('https://api.example.com/api/memes', {
+      const response = await fetch`${API_BASE_URL}/api/memes`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
