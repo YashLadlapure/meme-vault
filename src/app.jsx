@@ -3,6 +3,8 @@ import { useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
+import Upload from './components/Upload';
+import FolderView from './components/FolderView';
 import Navbar from './components/Navbar';
 import './app.css';
 
@@ -18,10 +20,13 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+        <Route path="/folder/:folderId" element={<ProtectedRoute><FolderView /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/dashboard" />} />
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<Navbar to="/dashboard" />} />
       </Routes>
     </Router>
   );
-}
+};
+
 // JWT Frontend deployed
