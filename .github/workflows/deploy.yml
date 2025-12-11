@@ -1,0 +1,54 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Run pre-deployment checks
+      run: |
+        echo "Build completed successfully!"
+        echo "Checking for required configuration files..."
+        [ -f vercel.json ] && echo "✓ vercel.json found" || echo "⚠ vercel.json not found"
+        [ -d dist ] && echo "✓ dist folder found" || echo "⚠ dist folder not found"
+    
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: dist/
+        retention-days: 5
+    
+    - name: Deployment Info
+      run: |
+        echo "========================================"
+        echo "Deployment-Ready Build Created"
+        echo "========================================"
+        echo "Project: meme-vault"
+        echo "Environment: Production"
+        echo "Deployment Platform: Vercel (via GitHub integration)"
+        echo "Frontend URL: https://meme-vault-x46t.vercel.app"
+        echo ""
+        echo "To manually trigger deployment on Vercel:"
+        echo "1. Go to your Vercel dashboard"
+        echo "2. Vercel automatically deploys on main branch push"
+        echo "3. Or set up GitHub integration in Vercel settings"
+        echo "========================================"
